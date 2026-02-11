@@ -7,27 +7,121 @@ interface ReviewConfig {
   style?: string;
 }
 
-export async function performReview(code: string, language: string, config: ReviewConfig) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+type LLMProvider = 'openai' | 'anthropic' | 'mock';
 
-  if (apiKey) {
-    return performLLMReview(code, language, config, apiKey);
+function detectProvider(): { provider: LLMProvider; apiKey: string; baseUrl: string; model: string } {
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const openaiBase = process.env.OPENAI_BASE_URL || process.env.OPENAI_API_BASE;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const model = process.env.LLM_MODEL || '';
+
+  // LiteLLM proxy or any OpenAI-compatible endpoint
+  if (openaiKey && openaiBase) {
+    return {
+      provider: 'openai',
+      apiKey: openaiKey,
+      baseUrl: openaiBase.replace(/\/+$/, ''),
+      model: model || 'gpt-4',
+    };
   }
 
-  // Simulate processing time for demo
+  // Direct OpenAI API
+  if (openaiKey) {
+    return {
+      provider: 'openai',
+      apiKey: openaiKey,
+      baseUrl: 'https://api.openai.com',
+      model: model || 'gpt-4',
+    };
+  }
+
+  // Direct Anthropic API
+  if (anthropicKey) {
+    return {
+      provider: 'anthropic',
+      apiKey: anthropicKey,
+      baseUrl: 'https://api.anthropic.com',
+      model: model || 'claude-sonnet-4-5-20250514',
+    };
+  }
+
+  return { provider: 'mock', apiKey: '', baseUrl: '', model: '' };
+}
+
+export function getProviderInfo() {
+  const { provider, baseUrl, model } = detectProvider();
+  if (provider === 'mock') return 'Mock';
+  if (provider === 'openai') return `OpenAI-compatible (${baseUrl}, model: ${model})`;
+  return `Anthropic (model: ${model})`;
+}
+
+export async function performReview(code: string, language: string, config: ReviewConfig) {
+  const { provider, apiKey, baseUrl, model } = detectProvider();
+
+  if (provider === 'openai') {
+    return performOpenAIReview(code, language, config, apiKey, baseUrl, model);
+  }
+
+  if (provider === 'anthropic') {
+    return performAnthropicReview(code, language, config, apiKey, baseUrl, model);
+  }
+
+  // Mock mode
   await new Promise((resolve) => setTimeout(resolve, 1500));
   return generateMockReview(code, language, config);
 }
 
-async function performLLMReview(
+async function performOpenAIReview(
   code: string,
   language: string,
   config: ReviewConfig,
   apiKey: string,
+  baseUrl: string,
+  model: string,
 ) {
   const { system, user } = buildPrompt(code, language, config);
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      max_tokens: 4096,
+      temperature: 0,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`OpenAI-compatible API error: ${response.status} ${err}`);
+  }
+
+  const data = await response.json() as {
+    choices: { message: { content: string } }[];
+  };
+  const text = data.choices[0]?.message?.content || '';
+
+  return parseReviewJSON(text);
+}
+
+async function performAnthropicReview(
+  code: string,
+  language: string,
+  config: ReviewConfig,
+  apiKey: string,
+  baseUrl: string,
+  model: string,
+) {
+  const { system, user } = buildPrompt(code, language, config);
+
+  const response = await fetch(`${baseUrl}/v1/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -35,7 +129,7 @@ async function performLLMReview(
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5-20250514',
+      model,
       max_tokens: 4096,
       system,
       messages: [{ role: 'user', content: user }],
@@ -50,9 +144,12 @@ async function performLLMReview(
   const data = await response.json() as { content: { type: string; text: string }[] };
   const text = data.content[0]?.text || '';
 
-  // Extract JSON from response (handle markdown code blocks)
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, text];
-  const parsed = JSON.parse(jsonMatch[1]!.trim());
+  return parseReviewJSON(text);
+}
 
-  return parsed;
+function parseReviewJSON(text: string) {
+  // Extract JSON from response (handle markdown code blocks)
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonStr = jsonMatch ? jsonMatch[1]!.trim() : text.trim();
+  return JSON.parse(jsonStr);
 }
