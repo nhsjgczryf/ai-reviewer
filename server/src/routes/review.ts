@@ -6,14 +6,19 @@ export const reviewRouter = Router();
 
 reviewRouter.post('/review', async (req: Request, res: Response) => {
   try {
-    const { code, language, config } = req.body;
+    const { code, language, config, model } = req.body;
 
     if (!code || typeof code !== 'string') {
-      res.status(400).json({ message: 'Missing or invalid "code" field' });
+      res.status(400).json({ message: '缺少或无效的 "code" 字段' });
       return;
     }
 
-    const result = await performReview(code, language || 'javascript', config || {});
+    const result = await performReview(
+      code,
+      language || 'javascript',
+      config || {},
+      model || undefined,
+    );
     res.json(result);
   } catch (err) {
     console.error('Review error:', err);

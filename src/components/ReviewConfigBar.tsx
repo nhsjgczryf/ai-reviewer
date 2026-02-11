@@ -5,6 +5,9 @@ interface Props {
   onConfigChange: (config: ReviewConfig) => void;
   language: string;
   onLanguageChange: (lang: string) => void;
+  model: string;
+  onModelChange: (model: string) => void;
+  defaultModel: string;
   onRunReview: () => void;
   isLoading: boolean;
   hasCode: boolean;
@@ -29,24 +32,32 @@ const LANGUAGES = [
   { value: 'html', label: 'HTML' },
   { value: 'css', label: 'CSS' },
   { value: 'yaml', label: 'YAML' },
+  { value: 'latex', label: 'LaTeX (论文)' },
 ];
 
 const DEPTHS: { value: ReviewDepth; label: string; desc: string }[] = [
-  { value: 'quick', label: 'Quick', desc: 'Surface-level scan' },
-  { value: 'standard', label: 'Standard', desc: 'Balanced review' },
-  { value: 'deep', label: 'Deep', desc: 'Thorough analysis' },
+  { value: 'quick', label: '快速', desc: '表面扫描' },
+  { value: 'standard', label: '标准', desc: '均衡评审' },
+  { value: 'deep', label: '深度', desc: '深入分析' },
 ];
 
-const FOCUS_AREAS: { value: FocusArea; label: string }[] = [
-  { value: 'architecture', label: 'Architecture' },
-  { value: 'performance', label: 'Performance' },
-  { value: 'security', label: 'Security' },
-  { value: 'maintainability', label: 'Maintainability' },
+const CODE_FOCUS_AREAS: { value: FocusArea; label: string }[] = [
+  { value: 'architecture', label: '架构' },
+  { value: 'performance', label: '性能' },
+  { value: 'security', label: '安全' },
+  { value: 'maintainability', label: '可维护性' },
+];
+
+const PAPER_FOCUS_AREAS: { value: FocusArea; label: string }[] = [
+  { value: 'structure', label: '结构' },
+  { value: 'methodology', label: '方法论' },
+  { value: 'writing', label: '写作' },
+  { value: 'references', label: '引用' },
 ];
 
 const STYLES: { value: ReviewStyle; label: string }[] = [
-  { value: 'strict', label: 'Strict' },
-  { value: 'lenient', label: 'Lenient' },
+  { value: 'strict', label: '严格' },
+  { value: 'lenient', label: '宽松' },
 ];
 
 export default function ReviewConfigBar({
@@ -54,10 +65,16 @@ export default function ReviewConfigBar({
   onConfigChange,
   language,
   onLanguageChange,
+  model,
+  onModelChange,
+  defaultModel,
   onRunReview,
   isLoading,
   hasCode,
 }: Props) {
+  const isPaper = language === 'latex';
+  const focusAreas = isPaper ? PAPER_FOCUS_AREAS : CODE_FOCUS_AREAS;
+
   const toggleFocusArea = (area: FocusArea) => {
     const current = config.focusAreas;
     const updated = current.includes(area)
@@ -71,7 +88,7 @@ export default function ReviewConfigBar({
   return (
     <div className="config-bar">
       <div className="config-group">
-        <label className="config-label">Language</label>
+        <label className="config-label">语言</label>
         <select
           className="config-select"
           value={language}
@@ -86,7 +103,18 @@ export default function ReviewConfigBar({
       </div>
 
       <div className="config-group">
-        <label className="config-label">Depth</label>
+        <label className="config-label">模型</label>
+        <input
+          className="config-input"
+          type="text"
+          value={model}
+          onChange={(e) => onModelChange(e.target.value)}
+          placeholder={defaultModel || '服务端默认'}
+        />
+      </div>
+
+      <div className="config-group">
+        <label className="config-label">深度</label>
         <div className="config-toggle-group">
           {DEPTHS.map((d) => (
             <button
@@ -102,9 +130,9 @@ export default function ReviewConfigBar({
       </div>
 
       <div className="config-group">
-        <label className="config-label">Focus</label>
+        <label className="config-label">关注点</label>
         <div className="config-toggle-group">
-          {FOCUS_AREAS.map((f) => (
+          {focusAreas.map((f) => (
             <button
               key={f.value}
               className={`config-toggle ${config.focusAreas.includes(f.value) ? 'active' : ''}`}
@@ -117,7 +145,7 @@ export default function ReviewConfigBar({
       </div>
 
       <div className="config-group">
-        <label className="config-label">Style</label>
+        <label className="config-label">风格</label>
         <div className="config-toggle-group">
           {STYLES.map((s) => (
             <button
@@ -139,10 +167,10 @@ export default function ReviewConfigBar({
         {isLoading ? (
           <>
             <span className="spinner" />
-            Analyzing...
+            分析中...
           </>
         ) : (
-          <>Run Review</>
+          <>开始评审</>
         )}
       </button>
     </div>

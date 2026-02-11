@@ -1,12 +1,12 @@
-import { useState, useCallback } from 'react';
-import type { ReviewConfig, ReviewResult } from './types/review';
-import { submitReview } from './services/api';
+import { useState, useCallback, useEffect } from 'react';
+import type { ReviewConfig, ReviewResult, FocusArea } from './types/review';
+import { submitReview, fetchServerConfig } from './services/api';
 import CodeInputPanel from './components/CodeInputPanel';
 import ReviewConfigBar from './components/ReviewConfigBar';
 import ReviewPanel from './components/ReviewPanel';
 import './App.css';
 
-const DEFAULT_CODE = `// Paste your code here or try the example below
+const DEFAULT_CODE = `// 在此粘贴代码，或使用以下示例
 function processUserData(users) {
   var result = [];
   for (var i = 0; i < users.length; i++) {
@@ -61,20 +61,45 @@ class UserService {
   }
 }`;
 
+const CODE_FOCUS: FocusArea[] = ['architecture', 'security', 'maintainability'];
+const PAPER_FOCUS: FocusArea[] = ['structure', 'methodology', 'writing', 'references'];
+
 const DEFAULT_CONFIG: ReviewConfig = {
   depth: 'standard',
-  focusAreas: ['architecture', 'security', 'maintainability'],
+  focusAreas: CODE_FOCUS,
   style: 'strict',
 };
+
+function isLatexLang(lang: string) {
+  return lang === 'latex';
+}
 
 export default function App() {
   const [code, setCode] = useState(DEFAULT_CODE);
   const [language, setLanguage] = useState('javascript');
   const [config, setConfig] = useState<ReviewConfig>(DEFAULT_CONFIG);
+  const [model, setModel] = useState('');
+  const [defaultModel, setDefaultModel] = useState('');
   const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [highlightedRange, setHighlightedRange] = useState<[number, number] | null>(null);
+
+  useEffect(() => {
+    fetchServerConfig().then(({ defaultModel: dm }) => {
+      setDefaultModel(dm);
+    });
+  }, []);
+
+  const handleLanguageChange = useCallback((lang: string) => {
+    setLanguage(lang);
+    // Switch focus areas when toggling between code and paper mode
+    if (isLatexLang(lang) && !isLatexLang(language)) {
+      setConfig((prev) => ({ ...prev, focusAreas: PAPER_FOCUS }));
+    } else if (!isLatexLang(lang) && isLatexLang(language)) {
+      setConfig((prev) => ({ ...prev, focusAreas: CODE_FOCUS }));
+    }
+  }, [language]);
 
   const handleRunReview = useCallback(async () => {
     if (!code.trim()) return;
@@ -85,18 +110,25 @@ export default function App() {
     setHighlightedRange(null);
 
     try {
-      const result = await submitReview({ code, language, config });
+      const result = await submitReview({
+        code,
+        language,
+        config,
+        model: model || undefined,
+      });
       setReviewResult(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setError(err instanceof Error ? err.message : '发生未知错误');
     } finally {
       setIsLoading(false);
     }
-  }, [code, language, config]);
+  }, [code, language, config, model]);
 
   const handleHighlightCode = useCallback((range: [number, number] | null) => {
     setHighlightedRange(range);
   }, []);
+
+  const isPaper = isLatexLang(language);
 
   return (
     <div className="app">
@@ -104,12 +136,12 @@ export default function App() {
         <div className="app-header-left">
           <h1 className="app-title">
             <span className="app-title-icon">&#x2727;</span>
-            AI Code Review Assistant
+            AI 代码评审助手
           </h1>
           <span className="app-version">v0.1</span>
         </div>
         <p className="app-subtitle">
-          Structured, actionable code review powered by AI
+          基于 AI 的结构化、可执行的代码与论文评审
         </p>
       </header>
 
@@ -117,7 +149,10 @@ export default function App() {
         config={config}
         onConfigChange={setConfig}
         language={language}
-        onLanguageChange={setLanguage}
+        onLanguageChange={handleLanguageChange}
+        model={model}
+        onModelChange={setModel}
+        defaultModel={defaultModel}
         onRunReview={handleRunReview}
         isLoading={isLoading}
         hasCode={code.trim().length > 0}
@@ -126,9 +161,9 @@ export default function App() {
       <main className="app-main">
         <div className="panel panel-code">
           <div className="panel-header">
-            <span className="panel-title">Code Input</span>
+            <span className="panel-title">{isPaper ? '论文输入' : '代码输入'}</span>
             <span className="panel-meta">
-              {code.split('\n').length} lines
+              {code.split('\n').length} 行
             </span>
           </div>
           <CodeInputPanel
@@ -143,10 +178,10 @@ export default function App() {
 
         <div className="panel panel-review">
           <div className="panel-header">
-            <span className="panel-title">Review Results</span>
+            <span className="panel-title">评审结果</span>
             {reviewResult && (
               <span className="panel-meta">
-                {reviewResult.issues.length + reviewResult.codeFindings.length} findings
+                {reviewResult.issues.length + reviewResult.codeFindings.length} 个发现
               </span>
             )}
           </div>
@@ -156,6 +191,7 @@ export default function App() {
             error={error}
             onHighlightCode={handleHighlightCode}
             highlightedRange={highlightedRange}
+            isPaper={isPaper}
           />
         </div>
       </main>

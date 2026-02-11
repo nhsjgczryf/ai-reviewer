@@ -1,7 +1,9 @@
 export type ReviewLevel = 'architecture' | 'module' | 'function' | 'line';
 export type Severity = 'critical' | 'major' | 'minor' | 'nit';
 export type ReviewDepth = 'quick' | 'standard' | 'deep';
-export type FocusArea = 'architecture' | 'performance' | 'security' | 'maintainability';
+export type FocusArea =
+  | 'architecture' | 'performance' | 'security' | 'maintainability'
+  | 'structure' | 'methodology' | 'writing' | 'references';
 export type ReviewStyle = 'strict' | 'lenient';
 
 export interface ReviewItem {
@@ -61,4 +63,5 @@ export interface ReviewRequest {
   code: string;
   language: string;
   config: ReviewConfig;
+  model?: string;
 }

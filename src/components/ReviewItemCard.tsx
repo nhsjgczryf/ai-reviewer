@@ -8,17 +8,17 @@ interface Props {
 }
 
 const SEVERITY_LABELS: Record<string, string> = {
-  critical: 'Critical',
-  major: 'Major',
-  minor: 'Minor',
-  nit: 'Nit',
+  critical: '严重',
+  major: '重要',
+  minor: '次要',
+  nit: '建议',
 };
 
 const LEVEL_LABELS: Record<string, string> = {
-  architecture: 'Architecture',
-  module: 'Module',
-  function: 'Function',
-  line: 'Line',
+  architecture: '架构',
+  module: '模块',
+  function: '函数',
+  line: '语句',
 };
 
 export default function ReviewItemCard({ item, onHighlightCode, isHighlighted }: Props) {
@@ -62,18 +62,18 @@ export default function ReviewItemCard({ item, onHighlightCode, isHighlighted }:
       {expanded && (
         <div className="review-item-details">
           <div className="review-item-detail">
-            <span className="detail-label">Why it matters</span>
+            <span className="detail-label">影响</span>
             <p className="detail-text">{item.whyItMatters}</p>
           </div>
           <div className="review-item-detail">
-            <span className="detail-label">Suggestion</span>
+            <span className="detail-label">建议</span>
             <p className="detail-text suggestion-text">{item.suggestion}</p>
           </div>
         </div>
       )}
 
       <div className="review-item-expand-hint">
-        {expanded ? 'Click to collapse' : 'Click to expand details'}
+        {expanded ? '点击收起' : '点击展开详情'}
       </div>
     </div>
   );

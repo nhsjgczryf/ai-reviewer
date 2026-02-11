@@ -98,6 +98,27 @@
   border-color: var(--accent-blue);
 }
 
+.config-input {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 12px;
+  outline: none;
+  width: 160px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.config-input::placeholder {
+  color: var(--text-muted);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.config-input:focus {
+  border-color: var(--accent-blue);
+}
+
 .config-toggle-group {
   display: flex;
   gap: 2px;

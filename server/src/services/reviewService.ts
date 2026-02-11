@@ -55,15 +55,25 @@ export function getProviderInfo() {
   return `Anthropic (model: ${model})`;
 }
 
-export async function performReview(code: string, language: string, config: ReviewConfig) {
-  const { provider, apiKey, baseUrl, model } = detectProvider();
+export function getDefaultModel() {
+  return detectProvider().model;
+}
 
-  if (provider === 'openai') {
-    return performOpenAIReview(code, language, config, apiKey, baseUrl, model);
+export async function performReview(
+  code: string,
+  language: string,
+  config: ReviewConfig,
+  requestModel?: string,
+) {
+  const detected = detectProvider();
+  const model = requestModel || detected.model;
+
+  if (detected.provider === 'openai') {
+    return performOpenAIReview(code, language, config, detected.apiKey, detected.baseUrl, model);
   }
 
-  if (provider === 'anthropic') {
-    return performAnthropicReview(code, language, config, apiKey, baseUrl, model);
+  if (detected.provider === 'anthropic') {
+    return performAnthropicReview(code, language, config, detected.apiKey, detected.baseUrl, model);
   }
 
   // Mock mode

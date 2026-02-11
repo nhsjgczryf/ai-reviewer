@@ -32,6 +32,7 @@ const LANGUAGE_MAP: Record<string, string> = {
   json: 'json',
   xml: 'xml',
   markdown: 'markdown',
+  latex: 'latex',
 };
 
 export default function CodeInputPanel({ code, language, onChange, highlightedRange }: Props) {
