@@ -60,6 +60,13 @@ const STYLES: { value: ReviewStyle; label: string }[] = [
   { value: 'lenient', label: '宽松' },
 ];
 
+const MODEL_OPTIONS = [
+  { group: 'OpenAI', models: ['gpt-4', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
+  { group: 'Anthropic', models: ['claude-sonnet-4-5-20250514', 'claude-opus-4-20250514', 'claude-haiku-4-5-20251001'] },
+  { group: 'DeepSeek', models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'] },
+  { group: '其他', models: ['qwen-plus', 'qwen-turbo', 'glm-4', 'llama-3.1-70b'] },
+];
+
 export default function ReviewConfigBar({
   config,
   onConfigChange,
@@ -104,13 +111,22 @@ export default function ReviewConfigBar({
 
       <div className="config-group">
         <label className="config-label">模型</label>
-        <input
-          className="config-input"
-          type="text"
+        <select
+          className="config-select config-select-model"
           value={model}
           onChange={(e) => onModelChange(e.target.value)}
-          placeholder={defaultModel || '服务端默认'}
-        />
+        >
+          <option value="">{defaultModel ? `默认 (${defaultModel})` : '服务端默认'}</option>
+          {MODEL_OPTIONS.map((group) => (
+            <optgroup key={group.group} label={group.group}>
+              {group.models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
       </div>
 
       <div className="config-group">

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 
@@ -6,7 +6,6 @@ interface Props {
   code: string;
   language: string;
   onChange: (value: string) => void;
-  highlightedRange: [number, number] | null;
 }
 
 const LANGUAGE_MAP: Record<string, string> = {
@@ -35,42 +34,12 @@ const LANGUAGE_MAP: Record<string, string> = {
   latex: 'latex',
 };
 
-export default function CodeInputPanel({ code, language, onChange, highlightedRange }: Props) {
+export default function CodeInputPanel({ code, language, onChange }: Props) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const decorationsRef = useRef<editor.IEditorDecorationsCollection | null>(null);
 
   const handleEditorMount: OnMount = useCallback((editor) => {
     editorRef.current = editor;
-    decorationsRef.current = editor.createDecorationsCollection([]);
   }, []);
-
-  useEffect(() => {
-    const editor = editorRef.current;
-    const decorations = decorationsRef.current;
-    if (!editor || !decorations) return;
-
-    if (highlightedRange) {
-      const [startLine, endLine] = highlightedRange;
-      decorations.set([
-        {
-          range: {
-            startLineNumber: startLine,
-            startColumn: 1,
-            endLineNumber: endLine,
-            endColumn: 1000,
-          },
-          options: {
-            isWholeLine: true,
-            className: 'highlighted-code-line',
-            glyphMarginClassName: 'highlighted-code-glyph',
-          },
-        },
-      ]);
-      editor.revealLineInCenter(startLine);
-    } else {
-      decorations.set([]);
-    }
-  }, [highlightedRange]);
 
   const handleChange = useCallback(
     (value: string | undefined) => {
@@ -96,7 +65,7 @@ export default function CodeInputPanel({ code, language, onChange, highlightedRa
           scrollBeyondLastLine: false,
           wordWrap: 'on',
           padding: { top: 12 },
-          glyphMargin: true,
+          glyphMargin: false,
           folding: true,
           renderLineHighlight: 'line',
           smoothScrolling: true,

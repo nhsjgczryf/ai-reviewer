@@ -7,6 +7,16 @@ interface ReviewConfig {
   style?: string;
 }
 
+interface ReviewResult {
+  markdown: string;
+  metadata: {
+    reviewDepth: string;
+    focusAreas: string[];
+    timestamp: string;
+    linesReviewed: number;
+  };
+}
+
 type LLMProvider = 'openai' | 'anthropic' | 'mock';
 
 function detectProvider(): { provider: LLMProvider; apiKey: string; baseUrl: string; model: string } {
@@ -64,7 +74,7 @@ export async function performReview(
   language: string,
   config: ReviewConfig,
   requestModel?: string,
-) {
+): Promise<ReviewResult> {
   const detected = detectProvider();
   const model = requestModel || detected.model;
 
@@ -81,6 +91,18 @@ export async function performReview(
   return generateMockReview(code, language, config);
 }
 
+function buildReviewResult(markdown: string, code: string, config: ReviewConfig): ReviewResult {
+  return {
+    markdown,
+    metadata: {
+      reviewDepth: config.depth || 'standard',
+      focusAreas: config.focusAreas || [],
+      timestamp: new Date().toISOString(),
+      linesReviewed: code.split('\n').length,
+    },
+  };
+}
+
 async function performOpenAIReview(
   code: string,
   language: string,
@@ -88,7 +110,7 @@ async function performOpenAIReview(
   apiKey: string,
   baseUrl: string,
   model: string,
-) {
+): Promise<ReviewResult> {
   const { system, user } = buildPrompt(code, language, config);
 
   const response = await fetch(`${baseUrl}/v1/chat/completions`, {
@@ -118,7 +140,7 @@ async function performOpenAIReview(
   };
   const text = data.choices[0]?.message?.content || '';
 
-  return parseReviewJSON(text);
+  return buildReviewResult(text, code, config);
 }
 
 async function performAnthropicReview(
@@ -128,7 +150,7 @@ async function performAnthropicReview(
   apiKey: string,
   baseUrl: string,
   model: string,
-) {
+): Promise<ReviewResult> {
   const { system, user } = buildPrompt(code, language, config);
 
   const response = await fetch(`${baseUrl}/v1/messages`, {
@@ -154,12 +176,5 @@ async function performAnthropicReview(
   const data = await response.json() as { content: { type: string; text: string }[] };
   const text = data.content[0]?.text || '';
 
-  return parseReviewJSON(text);
-}
-
-function parseReviewJSON(text: string) {
-  // Extract JSON from response (handle markdown code blocks)
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const jsonStr = jsonMatch ? jsonMatch[1]!.trim() : text.trim();
-  return JSON.parse(jsonStr);
+  return buildReviewResult(text, code, config);
 }

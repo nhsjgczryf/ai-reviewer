@@ -56,17 +56,6 @@ body {
   line-height: 1.5;
 }
 
-/* Monaco editor highlighted line */
-.highlighted-code-line {
-  background-color: rgba(88, 166, 255, 0.15) !important;
-  border-left: 3px solid var(--accent-blue) !important;
-}
-
-.highlighted-code-glyph {
-  background-color: var(--accent-blue);
-  width: 3px !important;
-}
-
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;

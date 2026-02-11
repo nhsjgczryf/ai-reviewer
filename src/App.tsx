@@ -83,7 +83,6 @@ export default function App() {
   const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [highlightedRange, setHighlightedRange] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     fetchServerConfig().then(({ defaultModel: dm }) => {
@@ -107,7 +106,6 @@ export default function App() {
     setIsLoading(true);
     setError(null);
     setReviewResult(null);
-    setHighlightedRange(null);
 
     try {
       const result = await submitReview({
@@ -123,10 +121,6 @@ export default function App() {
       setIsLoading(false);
     }
   }, [code, language, config, model]);
-
-  const handleHighlightCode = useCallback((range: [number, number] | null) => {
-    setHighlightedRange(range);
-  }, []);
 
   const isPaper = isLatexLang(language);
 
@@ -170,7 +164,6 @@ export default function App() {
             code={code}
             language={language}
             onChange={setCode}
-            highlightedRange={highlightedRange}
           />
         </div>
 
@@ -179,19 +172,11 @@ export default function App() {
         <div className="panel panel-review">
           <div className="panel-header">
             <span className="panel-title">评审结果</span>
-            {reviewResult && (
-              <span className="panel-meta">
-                {reviewResult.issues.length + reviewResult.codeFindings.length} 个发现
-              </span>
-            )}
           </div>
           <ReviewPanel
             result={reviewResult}
             isLoading={isLoading}
             error={error}
-            onHighlightCode={handleHighlightCode}
-            highlightedRange={highlightedRange}
-            isPaper={isPaper}
           />
         </div>
       </main>
